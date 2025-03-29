@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Inundation Warning APP</string>
+    <string name="address_settings">Address Settings</string>
+    <string name="flood_warning">Flood Warning</string>
+    <string name="sos">SOS</string>
+</resources>

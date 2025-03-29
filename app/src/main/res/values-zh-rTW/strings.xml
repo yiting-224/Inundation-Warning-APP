@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">淹水預警系統</string>
+    <string name="address_settings">財產地址設定</string>
+    <string name="flood_warning">淹水預警</string>
+    <string name="sos">緊急求救</string>
+</resources>

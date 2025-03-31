@@ -118,7 +118,8 @@ fun MainScreen(selectedTab: Int = 1) {
                                     contentDescription = item.title
                                 )
                             }
-                        })
+                        }
+                    )
                 }
             }
         }

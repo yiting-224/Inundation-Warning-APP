@@ -39,7 +39,7 @@ fun WarningScreen() {
             Text(
                 text = stringResource(R.string.flood_warning),
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Normal,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .fillMaxWidth(),
                 textAlign = TextAlign.Left

@@ -32,7 +32,7 @@ fun SOSScreen() {
             Text(
                 text = stringResource(R.string.sos),
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Normal,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .fillMaxWidth(),
                 textAlign = TextAlign.Left

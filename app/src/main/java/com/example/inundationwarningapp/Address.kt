@@ -32,7 +32,7 @@ fun AddressScreen() {
             Text(
                 text = stringResource(R.string.address_settings),
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Normal,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .fillMaxWidth(),
                 textAlign = TextAlign.Left

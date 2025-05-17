@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "687348815123",
+    "project_id": "inundation-warning-app",
+    "storage_bucket": "inundation-warning-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:687348815123:android:dfd17e88656cc0c9a076e6",
+        "android_client_info": {
+          "package_name": "com.example.inundationwarningapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD37h4UNkzQXxmPmBdUgfyk2RUlUq5qa6E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -4,4 +4,13 @@
     <string name="address_settings">財產地址設定</string>
     <string name="flood_warning">淹水預警</string>
     <string name="sos">緊急求救</string>
+    <string name="tap_the_tag_twice_to_edit_information">輕觸標籤以編輯資訊</string>
+    <string name="home">住宅</string>
+    <string name="automobile">交通工具</string>
+    <string name="I_am_a...">我是...</string>
+    <string name="person_with_disabilities">身障人士</string>
+    <string name="hearing_impaired_individual">聽障人士</string>
+    <string name="visually_impaired_individual">視障人士</string>
+    <string name="non_native_speaker">非母語使用者</string>
+    <string name="regular_user">一般使用者</string>
 </resources>

@@ -86,8 +86,6 @@ fun MessageCard(msg: Message) {
                         fontSize = 20.sp
                     )
                 }
-
-
                 Text(
                     text = msg.body,
                     modifier = Modifier.padding(top = 0.dp, bottom = 10.dp, start = 10.dp, end = 10.dp),

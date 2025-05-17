@@ -4,4 +4,13 @@
     <string name="address_settings">Address Settings</string>
     <string name="flood_warning">Flood Warning</string>
     <string name="sos">SOS</string>
+    <string name="tap_the_tag_twice_to_edit_information">Tap The Tag Twice To Edit Information</string>
+    <string name="home">Home</string>
+    <string name="automobile">Automobile</string>
+    <string name="I_am_a...">I am a(n)...</string>
+    <string name="person_with_disabilities">person with disabilities</string>
+    <string name="hearing_impaired_individual">hearing-impaired individual</string>
+    <string name="visually_impaired_individual">visually impaired individual</string>
+    <string name="non_native_speaker">non-native speaker</string>
+    <string name="regular_user">regular user</string>
 </resources>

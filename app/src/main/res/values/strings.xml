@@ -3,7 +3,7 @@
     <string name="address_settings">Address Settings</string>
     <string name="flood_warning">Flood Warning</string>
     <string name="sos">SOS</string>
-    <string name="tap_the_tag_twice_to_edit_information">Tap the tag to edit information</string>
+    <string name="Click_the_button_in_the_lower_right_corner_to_set_the_address_and_location">Click the button in the lower right corner to set the address and location</string>
     <string name="home">Home</string>
     <string name="automobile">Automobile</string>
     <string name="I_am_a...">I am a(n)...</string>
@@ -12,4 +12,7 @@
     <string name="visually_impaired_individual">visually impaired individual</string>
     <string name="non_native_speaker">non-native speaker</string>
     <string name="regular_user">regular user</string>
+    <string name="click_the_button_to_call_the_police_hotline">Click the button to call the police hotline</string>
+    <string name="_119">119</string>
+    <string name="submit">Submit</string>
 </resources>

@@ -4,7 +4,7 @@
     <string name="address_settings">財產地址設定</string>
     <string name="flood_warning">淹水預警</string>
     <string name="sos">緊急求救</string>
-    <string name="tap_the_tag_twice_to_edit_information">輕觸標籤以編輯資訊</string>
+    <string name="Click_the_button_in_the_lower_right_corner_to_set_the_address_and_location">點選右下角按鈕以設定地址與定位</string>
     <string name="home">住宅</string>
     <string name="automobile">交通工具</string>
     <string name="I_am_a...">我是...</string>
@@ -13,4 +13,7 @@
     <string name="visually_impaired_individual">視障人士</string>
     <string name="non_native_speaker">非母語使用者</string>
     <string name="regular_user">一般使用者</string>
+    <string name="click_the_button_to_call_the_police_hotline">點擊按鈕以撥打報案專線</string>
+    <string name="_119">119</string>
+    <string name="submit">發送</string>
 </resources>

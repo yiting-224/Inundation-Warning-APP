@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -42,7 +43,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
+import com.google.android.material.shape.TriangleEdgeTreatment
 
 // 定義狀態常量，增加可讀性
 private const val UI_STATE_SOS_CONTENT = 0
@@ -133,7 +136,7 @@ fun DefaultPreview(onEmergencyCallClick: () -> Unit, onEmergencyTextClick: () ->
                         colors = ButtonDefaults.buttonColors(
                             contentColor = Color.White
                         ),
-                        shape = CutCornerShape(10.dp),
+                        shape = MaterialTheme.shapes.large,
                     ) {
                         Column {
                             Image(
@@ -167,7 +170,7 @@ fun DefaultPreview(onEmergencyCallClick: () -> Unit, onEmergencyTextClick: () ->
                         colors = ButtonDefaults.buttonColors(
                             contentColor = Color.White
                         ),
-                        shape = CutCornerShape(10.dp),
+                        shape = MaterialTheme.shapes.large,
                     ) {
                         Column {
                             Image(
@@ -203,7 +206,7 @@ fun DefaultPreview(onEmergencyCallClick: () -> Unit, onEmergencyTextClick: () ->
                     colors = ButtonDefaults.buttonColors(
                         contentColor = Color.White
                     ),
-                    shape = CutCornerShape(10.dp),
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Column {
                         Image(
@@ -240,7 +243,7 @@ fun DefaultPreview(onEmergencyCallClick: () -> Unit, onEmergencyTextClick: () ->
                         colors = ButtonDefaults.buttonColors(
                             contentColor = Color.White
                         ),
-                        shape = CutCornerShape(10.dp),
+                        shape = MaterialTheme.shapes.large,
                     ) {
                         Column {
                             Image(
@@ -272,7 +275,7 @@ fun DefaultPreview(onEmergencyCallClick: () -> Unit, onEmergencyTextClick: () ->
                         colors = ButtonDefaults.buttonColors(
                             contentColor = Color.White
                         ),
-                        shape = CutCornerShape(10.dp),
+                        shape = MaterialTheme.shapes.large,
                     ) {
                         Column {
                             Image(
@@ -343,7 +346,7 @@ fun ReportByCall(onEmergencyCall: () -> Unit) {
                     colors = ButtonDefaults.buttonColors(
                         contentColor = Color.White
                     ),
-                    shape = CutCornerShape(10.dp),
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Column {
                         Image(
@@ -424,7 +427,7 @@ fun ReportByText(onEmergencyTextClick: () -> Unit) {
                     colors = ButtonDefaults.buttonColors(
                         contentColor = Color.White
                     ),
-                    shape = CutCornerShape(10.dp),
+                    shape = MaterialTheme.shapes.large,
                 ) {
                     Row {
                         Image(

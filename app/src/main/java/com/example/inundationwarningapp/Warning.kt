@@ -52,7 +52,7 @@ fun WarningScreen() {
                     .fillMaxWidth(),
                 textAlign = TextAlign.Left
             )
-            Spacer(modifier = Modifier.padding(10.dp))
+            Spacer(modifier = Modifier.padding(15.dp))
             MessageCard(Message(stringResource(R.string.flood_warning), "住宅區域 1 小時後可能出現淹水情形。\n請務必採取防災措施。"))
         }
     }

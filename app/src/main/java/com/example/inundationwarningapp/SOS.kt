@@ -1,6 +1,10 @@
 package com.example.inundationwarningapp
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,7 +49,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
+import com.google.android.gms.location.LocationServices
 import com.google.android.material.shape.TriangleEdgeTreatment
+import android.Manifest
 
 // 定義狀態常量，增加可讀性
 private const val UI_STATE_SOS_CONTENT = 0
@@ -54,8 +60,70 @@ private const val UI_STATE_REP_BY_TEXT = 2
 
 @Composable
 fun SOSScreen() {
-    // 使用 mutableIntStateOf 來儲存整數狀態，初始值為 UI_STATE_SOS_CONTENT (顯示 SOS 內容)
+//    val context = LocalContext.current  // --- 1. 宣告區 使用
+//    var currentUiState by remember { mutableIntStateOf(UI_STATE_SOS_CONTENT) } // --- 2. 邏輯區 使用
+//
+//    // --- 1. 宣告區：必須放在 Composable 的頂層 ---
+//    val locationPermissionLauncher = rememberLauncherForActivityResult(
+//        ActivityResultContracts.RequestMultiplePermissions()
+//    ) { permissions ->
+//        val fineLocationGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+//        val coarseLocationGranted = permissions[android.Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+//
+//        if (fineLocationGranted || coarseLocationGranted) {
+//            // 權限成功！這裡可以執行獲取位置的邏輯
+//            // 提示：實務上這裡可以呼叫一個獲取經緯度並更新 UI 的 function
+//        } else {
+//            android.widget.Toast.makeText(context, "需定位權限以提供救援位置", android.widget.Toast.LENGTH_SHORT).show()
+//        }
+//    }
+
+    val context = LocalContext.current
     var currentUiState by remember { mutableIntStateOf(UI_STATE_SOS_CONTENT) }
+
+    // --- 新增：用來儲存待傳送的簡訊文字 ---
+    var smsText by remember { mutableStateOf("您好，我是一名聽障人士，\n目前所在位置淹水，需救援。\n請儘速派人協助。\n\n謝謝！") }
+
+    // --- 新增：定位工具 ---
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    // 宣告權限 Launcher
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+
+        if (fineLocationGranted || coarseLocationGranted) {
+            // 權限成功：抓取位置後發送
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    val finalMessage = if (location != null) {
+                        "$smsText\n\n我的精確位置：\nhttps://www.google.com/maps?q=${location.latitude},${location.longitude}"
+                    } else {
+                        "$smsText\n\n(暫時無法取得座標)"
+                    }
+
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("smsto:119")
+                        putExtra("sms_body", finalMessage)
+                    }
+                    context.startActivity(intent)
+                }
+            } catch (e: SecurityException) {
+                Toast.makeText(context, "定位失敗", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            // 權限被拒絕：依然發送簡訊，只是沒有座標
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("smsto:119")
+                putExtra("sms_body", smsText + "\n\n(使用者未授權定位)")
+            }
+            context.startActivity(intent)
+        }
+    }
+    // --- 2. 邏輯區：根據狀態顯示頁面 ---
+    // 使用 mutableIntStateOf 來儲存整數狀態，初始值為 UI_STATE_SOS_CONTENT (顯示 SOS 內容)
 
     when (currentUiState) {
         UI_STATE_SOS_CONTENT -> {
@@ -75,10 +143,24 @@ fun SOSScreen() {
                 }
             )
         }
+//        UI_STATE_REP_BY_TEXT -> {
+//            ReportByText(
+//                onEmergencyTextClick = {
+//                    currentUiState = UI_STATE_SOS_CONTENT
+//                }
+//            )
+//        }
         UI_STATE_REP_BY_TEXT -> {
             ReportByText(
-                onEmergencyTextClick = {
-                    currentUiState = UI_STATE_SOS_CONTENT
+                currentText = smsText,
+                onTextChange = { smsText = it },
+                onSendClick = {
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
                 }
             )
         }
@@ -304,6 +386,7 @@ fun DefaultPreview(onEmergencyCallClick: () -> Unit, onEmergencyTextClick: () ->
 
 @Composable
 fun ReportByCall(onEmergencyCall: () -> Unit) {
+    val context = LocalContext.current // 獲取 Context
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -338,9 +421,14 @@ fun ReportByCall(onEmergencyCall: () -> Unit) {
 
             Spacer(modifier = Modifier.padding(10.dp))
 
-            Column {
+            Column {    // 開啟撥號頁面，填入號碼 119，但不自動撥出
                 androidx.compose.material3.Button(
-                    onClick = {},
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_DIAL).apply {
+                            data = Uri.parse("tel:119")
+                        }
+                        context.startActivity(intent)
+                    },
                     modifier = Modifier
                         .size(width = 335.dp, height = 400.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -374,7 +462,12 @@ fun ReportByCall(onEmergencyCall: () -> Unit) {
 }
 
 @Composable
-fun ReportByText(onEmergencyTextClick: () -> Unit) {
+fun ReportByText(
+    currentText: String,
+    onTextChange: (String) -> Unit,
+    onSendClick: () -> Unit
+) {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -404,8 +497,8 @@ fun ReportByText(onEmergencyTextClick: () -> Unit) {
                     "謝謝！") } // 狀態來保存使用者輸入的文字
 
             OutlinedTextField(
-                value = text, // 目前顯示的文字
-                onValueChange = { newText -> text = newText }, // 當文字改變時更新狀態
+                value = currentText,
+                onValueChange = onTextChange,
                 label = { Text("Enter your message") }, // 提示標籤
                 modifier = Modifier
                     .fillMaxWidth() // 讓文字框填滿可用寬度
@@ -416,12 +509,11 @@ fun ReportByText(onEmergencyTextClick: () -> Unit) {
 
             // Submit Button
             Column (
-                modifier = Modifier
-                    .fillMaxHeight(),
+                modifier = Modifier.fillMaxHeight(),
                 verticalArrangement = Arrangement.Bottom
             ){
                 androidx.compose.material3.Button(
-                    onClick = {},
+                    onClick = onSendClick,
                     modifier = Modifier
                         .size(width = 335.dp, height = 65.dp),
                     colors = ButtonDefaults.buttonColors(

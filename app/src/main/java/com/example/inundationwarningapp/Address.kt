@@ -1,6 +1,10 @@
 package com.example.inundationwarningapp
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +49,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.android.gms.location.LocationServices
 import kotlin.text.isBlank
+import android.content.Context
+import androidx.compose.runtime.LaunchedEffect
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 // 定義狀態常量，增加可讀性
 private const val UI_STATE_DEFAULT = 0
@@ -56,34 +66,148 @@ data class FormData(
     val address: String = ""
 )
 
+// 存檔：將 List 轉為 JSON 字串存入 SharedPreferences
+fun saveLocations(context: Context, locations: List<FormData>) {
+    val sharedPreferences = context.getSharedPreferences("InundationPrefs", Context.MODE_PRIVATE)
+    val editor = sharedPreferences.edit()
+    val json = Gson().toJson(locations)
+    editor.putString("saved_locations", json)
+    editor.apply()
+}
+
+// 讀取：從 SharedPreferences 讀取 JSON 並轉回 List
+fun loadLocations(context: Context): List<FormData> {
+    val sharedPreferences = context.getSharedPreferences("InundationPrefs", Context.MODE_PRIVATE)
+    val json = sharedPreferences.getString("saved_locations", null) ?: return emptyList()
+    val type = object : TypeToken<List<FormData>>() {}.type
+    return Gson().fromJson(json, type)
+}
+
+// 存檔：儲存最後一次獲取的定位字串
+fun saveLastKnownLocation(context: Context, locationText: String) {
+    val sharedPreferences = context.getSharedPreferences("InundationPrefs", Context.MODE_PRIVATE)
+    sharedPreferences.edit().putString("last_known_location", locationText).apply()
+}
+
+// 讀取：獲取上次儲存的定位字串
+fun loadLastKnownLocation(context: Context): String {
+    val sharedPreferences = context.getSharedPreferences("InundationPrefs", Context.MODE_PRIVATE)
+    return sharedPreferences.getString("last_known_location", "正在獲取定位...") ?: "正在獲取定位..."
+}
+
 @Composable
 fun AddressScreen() {
-    // 使用 mutableIntStateOf 來儲存整數狀態，初始值為 UI_STATE_SOS_CONTENT (顯示 SOS 內容)
-    var currentUiState by remember { mutableIntStateOf(UI_STATE_SET) }
+    val context = LocalContext.current
+    var currentUiState by remember { mutableIntStateOf(UI_STATE_DEFAULT) }
+    // --- 修改：初始值從檔案讀取 ---
+    var customLocations by remember { mutableStateOf(loadLocations(context)) }
+
+    // --- 新增：監控列表變化並存檔 ---
+    // 每當 customLocations 內容改變時，這個區塊就會執行
+    LaunchedEffect(customLocations) {
+        saveLocations(context, customLocations)
+    }
+
+    // --- 修改：初始值改為從檔案讀取上次的紀錄 ---
+    var currentLocationText by remember { mutableStateOf(loadLastKnownLocation(context)) }
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    // --- 新增：定位權限 Launcher ---
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            // 權限成功，抓取位置
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        val newLocation = "緯度：${String.format("%.2f", location.latitude)}，經度：${String.format("%.2f", location.longitude)}"
+
+                        // 1. 更新目前的 UI 狀態
+                        currentLocationText = newLocation
+
+                        // 2. --- 新增：立即存檔到永久空間 ---
+                        saveLastKnownLocation(context, newLocation)
+                    } else {
+                        "定位失敗，請確保 GPS 已開啟"
+                    }
+                }
+            } catch (e: SecurityException) {
+                currentLocationText = "權限不足"
+            }
+        }
+    }
 
     when (currentUiState) {
         UI_STATE_DEFAULT -> {
             DefaultPreview(
-                onAddClick = {
-                    currentUiState = UI_STATE_SET
+                locationText = currentLocationText, // 傳入定位文字
+                customLocations = customLocations, // 傳入列表
+                onAddClick = { currentUiState = UI_STATE_SET },
+                onLocationClick = {
+                    // 點擊定位按鈕觸發
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            android.Manifest.permission.ACCESS_FINE_LOCATION,
+                            android.Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                },
+                // --- 新增：刪除邏輯 ---
+                onDeleteLocation = { target ->
+                    // 這裡刪除後，LaunchedEffect 會自動幫你存檔
+                    customLocations = customLocations.filter { it != target }
                 }
             )
         }
         UI_STATE_SET -> {
             SetAddress(
-                onFinishCall = {
+                onFinishCall = {currentUiState = UI_STATE_DEFAULT},
+                onSubmit = { newData ->
+                    // 這裡新增後，LaunchedEffect 會自動幫你存檔
+                    customLocations = customLocations + newData
                     currentUiState = UI_STATE_DEFAULT
-                },
-                onSubmit = { formData ->
-                    println("Form Submitted: Title = ${formData.title}, Address = ${formData.address}")
                 }
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DefaultPreview(onAddClick: () -> Unit){
+fun DefaultPreview(
+    locationText: String,
+    customLocations: List<FormData>,
+    onAddClick: () -> Unit,
+    onLocationClick: () -> Unit,
+    onDeleteLocation: (FormData) -> Unit // 新增 Callback
+){
+    // 用來控制對話框顯示的狀態
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var itemToDelete by remember { mutableStateOf<FormData?>(null) }
+
+    // 刪除確認對話框
+    if (showDeleteDialog && itemToDelete != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("刪除位置") },
+            text = { Text("確定要刪除「${itemToDelete?.title}」嗎？") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        onDeleteLocation(itemToDelete!!)
+                        showDeleteDialog = false
+                    }
+                ) { Text("確定", color = Color.Red) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -92,7 +216,8 @@ fun DefaultPreview(onAddClick: () -> Unit){
     ) {
         Column(
             modifier = Modifier
-                .fillMaxHeight(),
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState()), // 確保內容多時可捲動
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // header
@@ -100,8 +225,7 @@ fun DefaultPreview(onAddClick: () -> Unit){
                 text = stringResource(R.string.address_settings),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Left
             )
 
@@ -116,62 +240,104 @@ fun DefaultPreview(onAddClick: () -> Unit){
                 textAlign = TextAlign.Center
             )
 
-            // location button
-            Column (
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Bottom
-            ){
-                Column {
-                    androidx.compose.material3.Button(
-                        onClick = onAddClick,
-                        modifier = Modifier
-                            .size(width = 70.dp, height = 70.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            contentColor = Color.White
-                        ),
-                        shape = CircleShape,
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Column {
-                            Image(
-                                painter = painterResource(R.drawable.add),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .align(Alignment.CenterHorizontally)
-                            )
+            Spacer(modifier = Modifier.padding(10.dp))
+
+            // 目前所在位置 Block
+            LocationCard(title = "目前所在位置", content = locationText, color = MaterialTheme.colorScheme.surfaceVariant)
+
+            Spacer(modifier = Modifier.padding(10.dp))
+
+            //  動態新增的財產地址 Block
+            customLocations.forEach { data ->
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // 使用 Box 包裹以加入長按偵測
+                Box(
+                    modifier = Modifier.combinedClickable(
+                        onClick = { /* 點擊可以做其他事，例如導航 */ },
+                        onLongClick = {
+                            itemToDelete = data
+                            showDeleteDialog = true
                         }
-                    }
+                    )
+                ) {
+                    LocationCard(
+                        title = data.title,
+                        content = data.address,
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    )
                 }
-
-                Spacer(modifier = Modifier.padding(10.dp))
-
-                Column {
-                    androidx.compose.material3.Button(
-                        onClick = {},
-                        modifier = Modifier
-                            .size(width = 70.dp, height = 70.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            contentColor = Color.White
-                        ),
-                        shape = CircleShape,
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Column {
-                            Image(
-                                painter = painterResource(R.drawable.place),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .align(Alignment.CenterHorizontally)
-                            )
-                        }
+            }
+        }
+        // location button
+        Column (
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.Bottom
+        ){
+            Column {
+                androidx.compose.material3.Button(
+                    onClick = onAddClick,
+                    modifier = Modifier
+                        .size(width = 70.dp, height = 70.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        contentColor = Color.White
+                    ),
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Column {
+                        Image(
+                            painter = painterResource(R.drawable.add),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(50.dp)
+                                .align(Alignment.CenterHorizontally)
+                        )
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.padding(10.dp))
+
+            Column {
+                androidx.compose.material3.Button(
+                    onClick = onLocationClick,
+                    modifier = Modifier
+                        .size(width = 70.dp, height = 70.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        contentColor = Color.White
+                    ),
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Column {
+                        Image(
+                            painter = painterResource(R.drawable.place),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(50.dp)
+                                .align(Alignment.CenterHorizontally)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LocationCard(title: String, content: String, color: Color) {
+    androidx.compose.material3.Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = color)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = content, style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
@@ -236,21 +402,12 @@ fun SetAddress(onFinishCall: () -> Unit, onSubmit: (FormData) -> Unit) {
                         title = it
                         if (isTitleError) isTitleError = it.isBlank() // Clear error when user types
                     },
-                    label = { Text("標題 (e.g., 車子, 住宅)") },
+                    label = { Text("標題 (例：車子，住宅)") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(0.dp),
                     singleLine = true,
-                    shape = MaterialTheme.shapes.medium,
-//                    isError = isTitleError,
-//                    supportingText = {
-//                        if (isTitleError) {
-//                            Text(
-//                                text = "Title cannot be empty",
-//                                color = MaterialTheme.colorScheme.error
-//                            )
-//                        }
-//                    }
+                    shape = MaterialTheme.shapes.medium
                 )
 
                 // Address TextField
@@ -266,11 +423,12 @@ fun SetAddress(onFinishCall: () -> Unit, onSubmit: (FormData) -> Unit) {
 
                 // Submit Button
                 Button(
-//                    onClick = {
-//                        if (validateFields()) {
-//                            onSubmit(FormData(title = title, address = address))
-//                        }
-                    onClick = onFinishCall,
+                    onClick = {
+                        // 先檢查欄位是否為空
+                        if (title.isNotBlank() && address.isNotBlank()) {
+                            onSubmit(FormData(title = title, address = address))
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
@@ -287,42 +445,42 @@ fun SetAddress(onFinishCall: () -> Unit, onSubmit: (FormData) -> Unit) {
 fun AddressSearchBarField(
     addressQuery: String,
     onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier
 ) {
-    // SearchBar 通常需要一個 active 狀態來控制其展開/收縮的外觀和行為
-    // 對於一個簡單的表單欄位，我們可能不希望它有複雜的 active 行為
-    // 所以這裡的 active 狀態主要用於 SearchBar 的 API 要求
-    var active by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val geocoder = remember { android.location.Geocoder(context) }
+    var suggestions by remember { mutableStateOf(listOf<String>()) }
 
-    Box{ // 給 SearchBar 一些垂直邊距
-        SearchBar(
-            query = addressQuery,
-            onQueryChange = onQueryChange,
-            onSearch = {
-                // 當使用者在鍵盤上按下搜尋按鈕時觸發
-                // 你可以在這裡處理搜尋邏輯，或關閉 SearchBar 的 active 狀態
-                active = false
-                // onSubmit(FormData(title, addressQuery)) // 例如觸發表單提交
+    Column {
+        OutlinedTextField(
+            value = addressQuery,
+            onValueChange = { query ->
+                onQueryChange(query)
+                // 簡單的實作：當字數大於 3 時搜尋建議（非同步較佳，此處為示範）
+                if (query.length > 3) {
+                    try {
+                        val addresses = geocoder.getFromLocationName(query, 3)
+                        suggestions = addresses?.map { it.getAddressLine(0) } ?: emptyList()
+                    } catch (e: Exception) {
+                        suggestions = emptyList()
+                    }
+                }
             },
-            active = active, // 控制 SearchBar 是否處於活動/展開狀態
-            onActiveChange = {
-                // 當 active 狀態改變時觸發 (例如點擊 SearchBar)
-                // 對於簡單的表單欄位，你可能想讓它一直 inactive，或者簡單地切換
-                // active = it // 如果你希望它能展開，可以這樣寫
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(0.dp),
-            placeholder = { Text("搜尋地址...") },
-            leadingIcon = {
-                Icon(Icons.Filled.Search, contentDescription = "Search Icon")
-            },
-            // trailingIcon = { ... } // 可以加入清除按鈕等
-        ) {
-            // 這個區塊是當 SearchBar 'active' 時顯示的內容 (例如搜尋建議列表)
-            // 如果你只是把它當作一個輸入框，這個區塊可以為空，
-            // 或者根據你的需求顯示一些建議 (這會增加複雜性)
-            // For a simple text field, you might not need content here if 'active' is always false or managed simply.
+            label = { Text("搜尋地址 ...") },
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
+        )
+
+        // 顯示搜尋建議清單
+        suggestions.forEach { suggestion ->
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    onQueryChange(suggestion)
+                    suggestions = emptyList()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(suggestion, textAlign = TextAlign.Left, modifier = Modifier.fillMaxWidth())
+            }
         }
     }
 }

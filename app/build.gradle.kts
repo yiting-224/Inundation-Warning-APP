@@ -81,4 +81,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     implementation("com.google.android.gms:play-services-location:21.1.0")
+
+    implementation("com.google.code.gson:gson:2.10.1")
 }

@@ -83,4 +83,10 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.1.0")
 
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // Retrofit 用於網路請求
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    // Coroutines 用於非同步處理
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }
